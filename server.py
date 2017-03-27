@@ -15,6 +15,10 @@ if not hasattr(socket, 'IP_FREEBIND'):
 
 with open('./config.json') as f:
     config = json.load(f)
+if not "host" in config:
+    config['host'] = '0.0.0.0'
+if not "port" in config:
+    config['port'] = '3040'
 
 def ip_version(ip):
     if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
@@ -179,7 +183,7 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
 
 def simple_tcp_server():
     server = SocketServer.ThreadingTCPServer(
-        ("0.0.0.0", 4239),
+        (config.host, config.port),
         RequestHandlerClass=MyRequestHandlerWithStreamRequestHandler,
         bind_and_activate=False)
  
