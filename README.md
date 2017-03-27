@@ -7,10 +7,33 @@ IProxy is a binding proxy, intended bring source ip selection to applications th
 You can use any IP you machine has, and even whole ranges thanks to the freebind linux socket option.
 
 ----
-## usage
+## configuration
 - create `config.json` to set port and key
 - run `python server.py`
 - configure your apps to use the proxy
+
+---
+## usage
+It depends on your app, but it's pretty easy to use. For instance :
+```
+# without iproxy
+curl https://ipv4.haxx.es
+{
+    "address": {
+        "ip": "8.8.8.8"
+        ...
+    }
+}
+
+# with iproxy
+curl --proxy 127.0.0.1:4240 --proxy-user 13.37.13.37:1234567890secret https://ipv4.haxx.es
+{
+    "address": {
+        "ip": "13.37.13.37"
+        ...
+    }
+}
+```
 
 ----
 ## adding an ip address
