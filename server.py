@@ -183,7 +183,7 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
 
 def simple_tcp_server():
     server = SocketServer.ThreadingTCPServer(
-        (config.host, config.port),
+        (config['host'], config['port']),
         RequestHandlerClass=MyRequestHandlerWithStreamRequestHandler,
         bind_and_activate=False)
  
