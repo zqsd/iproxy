@@ -23,7 +23,7 @@ if not "port" in config:
 def ip_version(ip):
     if re.match(r"^\d+\.\d+\.\d+\.\d+$", ip):
         return 4
-    elif re.match(r"^([a-zA-Z0-9]{1,4}(?::[a-zA-Z0-9]{1,4}){0,7})$", ip):
+    elif re.match(r"^([a-zA-Z0-9]{1,4}(?::[a-zA-Z0-9]{0,4}){0,7})$", ip):
         return 6
     else:
         return False
@@ -58,7 +58,7 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
             msg = self.rfile.readline(65536).strip()
             if msg == '':
                 break
-            p = re.compile(ur'^(.+):(.+)$')
+            p = re.compile(ur'^(.+?):(.+)$')
             m = re.search(p, msg)
             if m:
                 self.request_headers[m.group(1)] = m.group(2).strip()
@@ -75,6 +75,7 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
             self.connection.send('HTTP/1.0 407 Proxy Authentication Required\nProxy-Authenticate: Basic realm="hack"\n\nAuthentification required\n')
             self.connection.close()
             return
+        print(json.dumps(self.request_headers))
 
         p = re.compile(ur'^Basic (.+)$')
         m = re.search(p, self.request_headers['Proxy-Authorization'])
@@ -84,6 +85,8 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
         m = re.search(p, auth)
         ip = m.group(1)
         self.ipv = ip_version(ip)
+        if self.ipv == 0:
+            print('unknown ip version for %s' % (ip))
         password = m.group(2)
         if password != config['key']:
             print('Request with wrong auth %s:%s' % (ip, password))
@@ -113,12 +116,14 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
         clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         clientSocket.setsockopt(socket.SOL_IP, socket.IP_FREEBIND, 1)
         clientSocket.bind((self.ip, 0))
+        print('connecting to %s:%d' % (self.host, self.port))
         try:
             clientSocket.connect_ex((self.host, self.port))
         except Exception, ex:
             self.connection.send("HTTP/1.0 500 Remote server not found\n\nCouldn't connect to remote server %s at port %d\n" % (self.host, self.port))
             self.connection.close()
             return
+        print('connected')
 
         # send headers
         clientSocket.send('%s %s HTTP/1.0\n' % (self.method, self.url))
@@ -153,8 +158,10 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
         clientSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         clientSocket.setsockopt(socket.SOL_IP, socket.IP_FREEBIND, 1)
         clientSocket.bind((self.ip, 0))
+        print('connecting')
         clientSocket.connect_ex((self.host, self.port))
         self.connection.send("HTTP/1.1 200 Connection established\r\n\r\n")
+        print('connected')
 
         read_list = [clientSocket, self.connection]
         run = True
@@ -181,6 +188,11 @@ class MyRequestHandlerWithStreamRequestHandler(SocketServer.StreamRequestHandler
         self.connection.close()
         clientSocket.close()
 
+server = SocketServer.ThreadingTCPServer(
+    (config['host'], config['port']),
+    RequestHandlerClass=MyRequestHandlerWithStreamRequestHandler,
+    bind_and_activate=False)
+
 def simple_tcp_server():
     server = SocketServer.ThreadingTCPServer(
         (config['host'], config['port']),
@@ -198,7 +210,7 @@ def signal_handler(signal, frame):
     print('You pressed Ctrl+C!')
     server.shutdown()
     server.server_close()
-    #sys.exit(0)
+    sys.exit(0)
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
