@@ -75,23 +75,18 @@ interface "eth0" {
 }
 ```
 
-create a system.d service `/etc/systemd/system/dhclient.service`:
+append to your `/etc/network/interfaces`: a system.d service `/etc/systemd/system/dhclient.service`:
 ```
-[Unit]
-Description=dhclient for sending DUID IPv6
-Wants=network.target
-Before=network.target
-
-[Service]
-Type=forking
-ExecStart=/usr/sbin/dhclient -cf /etc/dhcp/dhclient6.conf -6 -P -v eth0
-
-[Install]
-WantedBy=multi-user.target
+auto eth0
+iface eth0 inet6 static
+    address 1337:1337::1
+    netmask 48
+    pre-up dhclient -cf /etc/dhcp/dhclient6.conf -pf /run/dhclient6.eth0.pid -6 -P eth0
+    post-up ip -6 route add local 1337:1337::/48 dev lo
+    pre-down dhclient -x -pf /run/dhclient6.eth0.pid
 ```
 
-and enable+start the service :
+and restart the service :
 ```
-systemctl enable dhclient.service
-systemctl start dhclient.service
+ifdown eth0 && ifup eth0
 ```
