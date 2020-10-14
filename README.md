@@ -75,18 +75,45 @@ interface "eth0" {
 }
 ```
 
+create `/etc/systemd/system/dhclient.service`:
+```
+[Unit]
+Description=dhclient for sending DUID IPv6
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Restart=always
+RestartSec=10
+Type=forking
+ExecStart=/sbin/dhclient -cf /etc/dhcp/dhclient6.conf -6 -P -v eno1
+ExecStop=/sbin/dhclient -x -pf /var/run/dhclient6.pid
+
+[Install]
+WantedBy=network.target
+```
+
+
 append to your `/etc/network/interfaces`: a system.d service `/etc/systemd/system/dhclient.service`:
 ```
 auto eth0
 iface eth0 inet6 static
-    address 1337:1337::1
-    netmask 48
-    pre-up dhclient -cf /etc/dhcp/dhclient6.conf -pf /run/dhclient6.eth0.pid -6 -P eth0
     post-up ip -6 route add local 1337:1337::/48 dev lo
-    pre-down dhclient -x -pf /run/dhclient6.eth0.pid
 ```
 
-and restart the service :
+## systemd daemon
+nothing unusual here
+
+`/etc/systemd/system/iproxy.service`
 ```
-ifdown eth0 && ifup eth0
+[Unit]
+Description=iproxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Restart=always
+RestartSec=10
+WorkingDirectory=/path/to/iproxy
+ExecStart=/usr/bin/python /path/to/iproxy/server.py
 ```
